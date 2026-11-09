@@ -1,0 +1,24 @@
+shift-rules benchmark: 20 seeds, 32 providers, 3 sites, 28 days, python 3.13.5 on Windows
+
+Base schedule: 336.0 (sd 0.0, 336 to 336) assignments, no unfilled cell and no broken rule in any seed.
+Base build time in ms: 271 (sd 42, 210 to 375)
+
+Rule change: existing assignments that move, mean over 20 seeds (sd, min to max)
+
+| change | rebuild moves | from scratch moves | rebuild unfilled | scratch unfilled |
+|---|---|---|---|---|
+| four providers off for one week | 10.9 (sd 2.0, 7 to 14) | 93.8 (sd 21.4, 63 to 142) | 0.0 (sd 0.0, 0 to 0) | 0.0 (sd 0.0, 0 to 0) |
+| run limit 5 days -> 3 days | 2.9 (sd 1.9, 0 to 8) | 15.2 (sd 19.8, 0 to 91) | 0.0 (sd 0.0, 0 to 0) | 0.0 (sd 0.0, 0 to 0) |
+| at most 2 Friday or Saturday nights per 28 days | 7.2 (sd 2.0, 3 to 12) | 27.1 (sd 10.1, 10 to 53) | 0.1 (sd 0.3, 0 to 1) | 0.1 (sd 0.3, 0 to 1) |
+
+rebuild time in ms, four providers off for one week: 259 (sd 60, 137 to 428)
+rebuild time in ms, run limit 5 days -> 3 days: 177 (sd 112, 11 to 515)
+rebuild time in ms, at most 2 Friday or Saturday nights per 28 days: 400 (sd 134, 153 to 714)
+
+Roster too small (20 providers): unfilled coverage requirements out of 196, mean over 20 seeds: 9.1 (sd 3.2, 4 to 14)
+What blocked the providers in those cells (share of all provider-by-cell blocks):
+  rest-11h               37.5%
+  builtin:credentialed   20.1%
+  max-3-nights-per-week  17.0%
+  builtin:overlap        15.9%
+  off-*                   4.2%
