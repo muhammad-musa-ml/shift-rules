@@ -248,3 +248,38 @@ def load_rules(doc, roster: Roster) -> list:
         raise DocError("rules: expected a list")
     seen: set = set()
     return [_rule(obj, i, roster, seen) for i, obj in enumerate(doc)]
+
+
+def load_schedule(doc, roster: Roster) -> list:
+    """Read the assignments. Names that the roster does not have are kept, so
+    that the checker reports them instead of the loader hiding them."""
+    _keys(doc, "schedule", {"assignments"}, {"unfilled"})
+    if not isinstance(doc["assignments"], list):
+        raise DocError("schedule.assignments: expected a list")
+    out = []
+    for i, item in enumerate(doc["assignments"]):
+        where = "schedule.assignments[%d]" % i
+        _keys(item, where, {"provider", "date", "shift", "site"})
+        for field in ("provider", "shift", "site"):
+            if not isinstance(item[field], str):
+                raise DocError("%s.%s: expected a string, got %r" % (where, field, item[field]))
+        try:
+            day = (dt.date.fromisoformat(item["date"]) - roster.start).days
+        except (TypeError, ValueError):
+            raise DocError("%s.date: expected an ISO date, got %r" % (where, item["date"]))
+        out.append(Assignment(item["provider"], day, item["shift"], item["site"]))
+    return out
+
+
+def dump_schedule(roster: Roster, assignments, unfilled=()) -> dict:
+    ordered = sorted(
+        assignments,
+        key=lambda a: (a.day, roster.shifts[a.shift][0], a.site, a.provider))
+    return {
+        "assignments": [
+            {"provider": a.provider, "date": roster.date_of(a.day).isoformat(),
+             "shift": a.shift, "site": a.site}
+            for a in ordered
+        ],
+        "unfilled": list(unfilled),
+    }
