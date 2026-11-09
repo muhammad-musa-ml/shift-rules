@@ -75,6 +75,16 @@ class BlockedByTests(unittest.TestCase):
         s.add(A("p2", 5))
         self.assertEqual(s.blocked_by("p2", 6, "day", "A"), "run")
 
+    def test_when_two_rules_block_the_first_in_the_rule_list_is_named(self):
+        doc = [
+            {"id": "first", "kind": "unavailable", "provider": "p1", "dates": ["2026-01-05"]},
+            {"id": "second", "kind": "unavailable", "provider": "p1", "dates": ["2026-01-05"]},
+        ]
+        roster, rules = make(doc)
+        self.assertEqual(State(roster, rules).blocked_by("p1", 0, "day", "A"), "first")
+        roster, rules = make(doc[::-1])
+        self.assertEqual(State(roster, rules).blocked_by("p1", 0, "day", "A"), "second")
+
     def test_builtins_come_before_rules(self):
         roster, rules = make([{"id": "off", "kind": "unavailable", "provider": "p3"}])
         s = State(roster, rules)
@@ -131,6 +141,20 @@ class BuildTests(unittest.TestCase):
     def test_same_seed_gives_the_same_schedule(self):
         roster, rules = make([{"id": "cov", "kind": "coverage", "count": 1}])
         self.assertEqual(build(roster, rules, seed=7).assignments, build(roster, rules, seed=7).assignments)
+
+    def test_the_seed_changes_who_is_picked_when_loads_are_equal(self):
+        roster, rules = make([{"id": "cov", "kind": "coverage", "count": 1, "dates": ["2026-01-05"],
+                               "shift": "day", "site": "A"}])
+        first = {build(roster, rules, seed=s).assignments[0].provider for s in range(12)}
+        self.assertGreater(len(first), 1)
+
+    def test_every_added_assignment_is_credited_to_the_coverage_rule_that_asked_for_it(self):
+        roster, rules = make([{"id": "cov", "kind": "coverage", "count": 2, "site": "A",
+                               "dates": ["2026-01-05", "2026-01-06"]}])
+        result = build(roster, rules)
+        self.assertEqual(len(result.assignments), 8)
+        self.assertEqual(set(result.filled_for), set(result.assignments))
+        self.assertEqual(set(result.filled_for.values()), {"cov"})
 
     def test_work_is_spread_across_providers(self):
         roster, rules = make([{"id": "cov", "kind": "coverage", "count": 1, "site": "A"}])

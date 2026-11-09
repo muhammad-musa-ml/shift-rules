@@ -1,14 +1,18 @@
-import datetime as dt
+import os
+import tempfile
 import unittest
 
-from shiftrules.model import DocError, load_roster, load_rules
+from shiftrules.model import DocError, load_roster, load_rules, read_json
 
 from tests.fixtures import make, roster_doc
 
 
 class RosterTests(unittest.TestCase):
-    def test_fixture_starts_on_a_monday(self):
-        self.assertEqual(dt.date(2026, 1, 5).weekday(), 0)
+    def test_day_zero_is_the_start_date_and_weekdays_count_from_monday(self):
+        roster = load_roster(roster_doc())
+        self.assertEqual(roster.weekday(0), 0)
+        self.assertEqual(roster.date_of(0).isoformat(), "2026-01-05")
+        self.assertEqual(roster.date_of(3).isoformat(), "2026-01-08")
 
     def test_loads_a_valid_roster(self):
         roster = load_roster(roster_doc())
@@ -95,6 +99,38 @@ class RuleTests(unittest.TestCase):
     def test_date_outside_the_roster_is_refused(self):
         with self.assertRaisesRegex(DocError, "2026-02-01 is outside the roster"):
             make([{"id": "u", "kind": "unavailable", "provider": "p1", "dates": ["2026-02-01"]}])
+        with self.assertRaisesRegex(DocError, "2026-01-04 is outside the roster"):
+            make([{"id": "u", "kind": "unavailable", "provider": "p1", "dates": ["2026-01-04"]}])
+        make([{"id": "u", "kind": "unavailable", "provider": "p1", "dates": ["2026-01-05", "2026-01-18"]}])
+
+    def test_a_misspelled_id_or_kind_names_the_fields_that_are_there(self):
+        with self.assertRaisesRegex(DocError, r"rules\[0\]: id must be.*fields present: count, idd, kind"):
+            make([{"idd": "c", "kind": "coverage", "count": 1}])
+        with self.assertRaisesRegex(DocError, "rule 'c'.*unknown kind None.*fields present: count, id, knd"):
+            make([{"id": "c", "knd": "coverage", "count": 1}])
+
+    def test_values_of_the_wrong_type_are_errors_not_tracebacks(self):
+        with self.assertRaisesRegex(DocError, "no provider has the skill"):
+            make([{"id": "c", "kind": "coverage", "count": 1, "skill": ["peds"]}])
+        with self.assertRaisesRegex(DocError, "unknown kind"):
+            make([{"id": "c", "kind": ["coverage"], "count": 1}])
+
+    def test_a_scope_that_matches_no_shift_is_refused(self):
+        # 2026-01-06 is a Tuesday, so Monday-only and that date never meet.
+        with self.assertRaisesRegex(DocError, "rule 'c'.*its scope matches no shift"):
+            make([{"id": "c", "kind": "coverage", "count": 1, "weekdays": [0], "dates": ["2026-01-06"]}])
+        make([{"id": "c", "kind": "coverage", "count": 1, "weekdays": [1], "dates": ["2026-01-06"]}])
+
+    def test_a_key_repeated_in_a_json_file_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "rules.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write('[{"id": "w", "kind": "max_per_window", "max": 2, "max": 9, "window_days": 7}]')
+            with self.assertRaisesRegex(DocError, "rules.json: key 'max' appears twice"):
+                read_json(path)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write('[{"id": "w", "kind": "max_per_window", "max": 2, "window_days": 7}]')
+            self.assertEqual(read_json(path)[0]["max"], 2)
 
     def test_weekday_and_count_bounds(self):
         with self.assertRaisesRegex(DocError, "rule 'u'.weekdays"):

@@ -1,0 +1,33 @@
+python -m shiftrules generate --seed 1 --out demo
+wrote roster.json and rules.json to demo
+exit 0
+
+python -m shiftrules build demo/roster.json demo/rules.json --out demo/schedule.json
+built 336 assignments, 0 unfilled cells
+exit 0
+
+python -m shiftrules check demo/roster.json demo/rules.json demo/schedule.json
+336 assignments, 0 violations
+exit 0
+
+rules2.json is rules.json plus this rule:
+{"id": "p04-away", "kind": "unavailable", "provider": "p04", "dates": ["2026-01-05", "2026-01-11"]}
+
+python -m shiftrules check demo/roster.json demo/rules2.json demo/schedule.json
+p04-away: p04 is on 2026-01-05 day A but is unavailable
+p04-away: p04 is on 2026-01-11 night A but is unavailable
+336 assignments, 2 violations
+exit 1
+
+python -m shiftrules rebuild demo/roster.json demo/rules2.json demo/schedule.json --out demo/schedule2.json
+removed 2026-01-05 day A p04 (p04-away)
+removed 2026-01-11 night A p04 (p04-away)
+added 2026-01-05 day A p28 (cover-2-everywhere)
+added 2026-01-11 night A p01 (cover-2-everywhere)
+2 removed, 2 added, 0 unfilled cells
+exit 0
+
+python -m shiftrules check demo/roster.json demo/rules2.json demo/schedule2.json
+336 assignments, 0 violations
+exit 0
+

@@ -40,6 +40,7 @@ class RebuildTests(unittest.TestCase):
         self.assertTrue(all(why == "new-off" for _, why in out.removed))
         self.assertEqual(len(out.added), len(theirs))
         self.assertTrue(all(a.provider != victim.provider for a, _ in out.added))
+        self.assertTrue(all(why in {"cover-2-everywhere", "cover-peds-A-days"} for _, why in out.added))
         kept = set(old) - set(theirs)
         self.assertTrue(kept <= set(out.assignments))
         self.assertEqual(out.unfilled, [])

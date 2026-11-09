@@ -28,10 +28,12 @@ SEEDS = 20
 def verify(roster, rules, assignments, unfilled, where):
     found = check(roster, rules, assignments)
     hard = [v for v in found if v.involved]
-    short = [v for v in found if not v.involved]
-    if hard or len(short) != len(unfilled):
-        raise SystemExit("%s: %d broken rules, %d short cells, %d reported unfilled" % (
-            where, len(hard), len(short), len(unfilled)))
+    short = {(v.rule, v.detail.split(": ")[0]) for v in found if not v.involved}
+    reported = {(u.rule, "%s %s %s" % (roster.date_of(u.day).isoformat(), u.shift, u.site))
+                for u in unfilled}
+    if hard or short != reported:
+        raise SystemExit("%s: %d broken rules; short but not reported: %s; reported but not short: %s" % (
+            where, len(hard), sorted(short - reported), sorted(reported - short)))
 
 
 def changes(roster_doc, rules_doc, seed):

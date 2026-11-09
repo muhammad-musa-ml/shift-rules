@@ -2,9 +2,9 @@
 
 The builder tests each candidate against the rules incrementally (State).
 The finished list is then judged again by check.py. State and check.py are
-written separately and share only the matching of a rule's scope in
-model.py; only rebuild() calls check.py, to find what a changed rule now
-forbids.
+written separately and share only the matching of a rule's scope and the
+shift times, both in model.py; only rebuild() calls check.py, to find what a
+changed rule now forbids.
 """
 
 from __future__ import annotations

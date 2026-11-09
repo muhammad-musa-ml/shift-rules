@@ -1,7 +1,8 @@
 """Check a schedule against the rules, from the finished list.
 
-Only the matching of a rule's scope (Rule.covers_cell and Rule.applies_to in
-model.py) is shared with the builder in engine.py. The builder decides one
+Only the matching of a rule's scope (Rule.covers_cell and Rule.applies_to) and
+the shift times (Roster.shift_start and shift_end), all in model.py, are shared
+with the builder in engine.py. The builder decides one
 assignment at a time with its own incremental tests; this module re-derives
 every rule from the whole schedule. A rule the builder gets wrong shows up
 here as a violation instead of passing both.

@@ -45,6 +45,11 @@ class StructuralTests(unittest.TestCase):
         ])
         self.assertEqual(ids(found), ["builtin:unknown"] * 4)
 
+    def test_a_day_before_the_roster_starts_is_unknown(self):
+        roster, rules = make([])
+        self.assertEqual(ids(check(roster, rules, [Assignment("p1", -1, "day", "A")])),
+                         ["builtin:unknown"])
+
 
 class CoverageTests(unittest.TestCase):
     def test_short_cell_is_reported_with_the_count(self):
@@ -98,6 +103,11 @@ class WindowTests(unittest.TestCase):
         found = check(roster, rules, [A("p1", 0), A("p1", 1), A("p1", 2)])
         self.assertEqual(ids(found), ["w"])
         self.assertEqual(len(found[0].involved), 3)
+
+    def test_one_crowded_stretch_is_one_violation_however_many_windows_hold_it(self):
+        roster, rules = make([{"id": "w", "kind": "max_per_window", "max": 2, "window_days": 7}])
+        found = check(roster, rules, [A("p1", d) for d in (3, 4, 5)])
+        self.assertEqual(len(found), 1)
 
     def test_window_edge(self):
         roster, rules = make([self.rule])
@@ -181,6 +191,12 @@ class ScheduleFileTests(unittest.TestCase):
         doc = dump_schedule(roster, assignments)
         self.assertEqual(doc["assignments"][0]["date"], "2026-01-05")
         self.assertEqual(sorted(load_schedule(doc, roster)), sorted(assignments))
+
+    def test_a_name_that_is_not_a_string_is_refused(self):
+        roster, _ = make([])
+        bad = {"assignments": [{"provider": 5, "date": "2026-01-05", "shift": "day", "site": "A"}]}
+        with self.assertRaisesRegex(DocError, r"assignments\[0\].provider: expected a string"):
+            load_schedule(bad, roster)
 
     def test_a_field_the_loader_does_not_know(self):
         roster, _ = make([])

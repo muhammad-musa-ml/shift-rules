@@ -1,7 +1,7 @@
 """Command line: generate, build, check and rebuild.
 
 Exit codes: 0 done, 1 the schedule has violations or unfilled cells, 2 a
-document could not be loaded.
+document could not be loaded or a file could not be written.
 """
 
 from __future__ import annotations
@@ -40,17 +40,33 @@ def _print_unfilled(roster, unfilled) -> None:
             _blockers(u.blocked_by)))
 
 
+def _refuse_overwrite(out: str, *inputs: str) -> None:
+    if any(os.path.abspath(out) == os.path.abspath(p) for p in inputs):
+        raise DocError("--out %s is also an input file; choose another name" % out)
+
+
 def cmd_generate(args) -> int:
+    if not 5 <= args.days <= 366:
+        raise DocError("--days: expected 5 to 366, got %d" % args.days)
+    if args.providers < 1:
+        raise DocError("--providers: expected 1 or more, got %d" % args.providers)
+    paths = [os.path.join(args.out, name) for name in ("roster.json", "rules.json")]
+    taken = [p for p in paths if os.path.exists(p)]
+    if taken and not args.force:
+        raise DocError("%s already exists; pass --force to overwrite" % taken[0])
     doc = synth.roster_doc(args.seed, args.providers, args.days)
     os.makedirs(args.out, exist_ok=True)
-    _write_json(os.path.join(args.out, "roster.json"), doc)
-    _write_json(os.path.join(args.out, "rules.json"), synth.rules_doc(args.seed, doc))
+    _write_json(paths[0], doc)
+    _write_json(paths[1], synth.rules_doc(args.seed, doc))
     print("wrote roster.json and rules.json to %s" % args.out)
     return 0
 
 
 def cmd_build(args) -> int:
     roster, rules = _load(args)
+    if not any(r.kind == "coverage" for r in rules):
+        raise DocError("rules: no coverage rule, so there is nothing to build")
+    _refuse_overwrite(args.out, args.roster, args.rules)
     result = build(roster, rules, args.seed)
     _write_json(args.out, dump_schedule(roster, result.assignments,
                                         [u.as_dict(roster) for u in result.unfilled]))
@@ -71,6 +87,7 @@ def cmd_check(args) -> int:
 
 def cmd_rebuild(args) -> int:
     roster, rules = _load(args)
+    _refuse_overwrite(args.out, args.roster, args.rules, args.schedule)
     old = load_schedule(read_json(args.schedule), roster)
     out = rebuild(roster, rules, old, args.seed)
     for a, why in out.removed:
@@ -94,6 +111,7 @@ def parser() -> argparse.ArgumentParser:
     g.add_argument("--providers", type=int, default=32)
     g.add_argument("--days", type=int, default=28)
     g.add_argument("--out", required=True, help="folder to write into")
+    g.add_argument("--force", action="store_true", help="overwrite roster.json and rules.json")
     g.set_defaults(run=cmd_generate)
 
     b = sub.add_parser("build", help="build a schedule; exit 1 if any cell is unfilled")
@@ -109,7 +127,7 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("schedule")
     c.set_defaults(run=cmd_check)
 
-    r = sub.add_parser("rebuild", help="apply changed rules, moving as few assignments as possible")
+    r = sub.add_parser("rebuild", help="apply changed rules, keeping the assignments they still allow")
     r.add_argument("roster")
     r.add_argument("rules")
     r.add_argument("schedule")
@@ -123,6 +141,6 @@ def main(argv=None) -> int:
     args = parser().parse_args(argv)
     try:
         return args.run(args)
-    except DocError as e:
+    except (DocError, OSError) as e:
         print("error: %s" % e, file=sys.stderr)
         return 2

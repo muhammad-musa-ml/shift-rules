@@ -92,14 +92,27 @@ KINDS = {
 }
 
 
+def _no_duplicate_keys(pairs):
+    """json.load keeps the last of two equal keys; here that is an error, since
+    a repeated key in a rule would otherwise make one of its values vanish."""
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise DocError("key %r appears twice in one object" % key)
+        out[key] = value
+    return out
+
+
 def read_json(path: str):
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            return json.load(f, object_pairs_hook=_no_duplicate_keys)
     except OSError as e:
         raise DocError("%s: cannot read (%s)" % (path, e.strerror or e))
     except json.JSONDecodeError as e:
         raise DocError("%s: not valid JSON (%s)" % (path, e))
+    except DocError as e:
+        raise DocError("%s: %s" % (path, e))
 
 
 def _keys(obj, where, required, optional=()):
@@ -203,16 +216,19 @@ def _weekdays(value, where):
 def _rule(obj, index, roster, seen):
     if not isinstance(obj, dict):
         raise DocError("rules[%d]: expected an object" % index)
+    present = ", ".join(sorted(str(k) for k in obj))
     rid = obj.get("id")
     if not isinstance(rid, str) or not rid:
-        raise DocError("rules[%d]: id must be a non-empty string, got %r" % (index, rid))
+        raise DocError("rules[%d]: id must be a non-empty string, got %r (fields present: %s)" % (
+            index, rid, present))
     if rid in seen:
         raise DocError("rule %r: id used twice" % rid)
     seen.add(rid)
     where = "rule %r" % rid
     kind = obj.get("kind")
-    if kind not in KINDS:
-        raise DocError("%s: unknown kind %r (known: %s)" % (where, kind, ", ".join(sorted(KINDS))))
+    if not isinstance(kind, str) or kind not in KINDS:
+        raise DocError("%s: unknown kind %r (known: %s; fields present: %s)" % (
+            where, kind, ", ".join(sorted(KINDS)), present))
     required, optional = KINDS[kind]
     _keys(obj, where, {"id", "kind"} | required, optional)
 
@@ -227,7 +243,7 @@ def _rule(obj, index, roster, seen):
         fields["hours"] = _int(obj["hours"], where + ".hours", 0, 168)
     if "skill" in obj:
         skill = obj["skill"]
-        if not any(skill in p.skills for p in roster.providers.values()):
+        if not isinstance(skill, str) or not any(skill in p.skills for p in roster.providers.values()):
             raise DocError("%s.skill: no provider has the skill %r" % (where, skill))
         fields["skill"] = skill
     if "shift" in obj:
@@ -240,7 +256,11 @@ def _rule(obj, index, roster, seen):
         fields["weekdays"] = _weekdays(obj["weekdays"], where + ".weekdays")
     if "dates" in obj:
         fields["days"] = _dates(obj["dates"], where + ".dates", roster)
-    return Rule(**fields)
+    rule = Rule(**fields)
+    if not any(rule.covers_cell(roster, day, shift, site)
+               for day in range(roster.days) for shift in roster.shifts for site in roster.sites):
+        raise DocError("%s: its scope matches no shift of the roster" % where)
+    return rule
 
 
 def load_rules(doc, roster: Roster) -> list:

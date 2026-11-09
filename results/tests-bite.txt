@@ -1,0 +1,41 @@
+01 FAILED   check: a rest gap equal to the minimum is flagged -> FAIL: test_gap_equal_to_the_minimum_is_allowed
+02 FAILED   check: a window at its maximum is flagged -> FAIL: test_exactly_the_maximum_is_allowed
+03 FAILED   check: one crowded stretch is reported once per window that holds it -> FAIL: test_one_crowded_stretch_is_one_violation_however_many_windows_hold_it
+04 FAILED   check: a run at its maximum is flagged -> FAIL: test_a_gap_breaks_the_run
+05 FAILED   check: a cell at its count is flagged -> FAIL: test_filled_cell_is_clean
+06 FAILED   check: credentialing is ignored -> FAIL: test_provider_at_a_site_they_are_not_credentialed_for
+07 FAILED   check: back-to-back shifts count as overlap -> FAIL: test_two_shifts_on_one_day_are_one_day
+08 FAILED   check: duplicates are ignored -> FAIL: test_duplicate_assignment_is_reported_once_and_nothing_else
+09 FAILED   check: a day before the roster starts is accepted -> FAIL: test_a_day_before_the_roster_starts_is_unknown
+10 FAILED   engine: a rest gap equal to the minimum is blocked -> FAIL: test_builder_and_checker_agree_on_random_rules
+11 FAILED   engine: a window at its maximum is blocked -> FAIL: test_builder_and_checker_agree_on_random_rules
+12 FAILED   engine: a run at its maximum is blocked -> FAIL: test_builder_and_checker_agree_on_random_rules
+13 FAILED   engine: unavailable never blocks -> FAIL: test_builder_and_checker_agree_on_random_rules
+14 FAILED   engine: credentialing is not tested -> FAIL: test_builder_and_checker_agree_on_random_rules
+15 FAILED   engine: the last blocking rule is named, not the first -> FAIL: test_when_two_rules_block_the_first_in_the_rule_list_is_named
+16 FAILED   engine: fewest-shifts-first is removed -> FAIL: test_fills_every_cell_and_the_checker_agrees
+17 FAILED   engine: the seed no longer changes the tie-break -> FAIL: test_the_seed_changes_who_is_picked_when_loads_are_equal
+18 FAILED   engine: fills one past the count -> FAIL: test_every_added_assignment_is_credited_to_the_coverage_rule_that_asked_for_it
+19 FAILED   engine: a cell that cannot be filled is not reported -> FAIL: test_a_cell_nobody_can_cover_is_reported_with_the_reasons
+20 FAILED   engine: a rebuild tie goes to the earliest, not the latest -> FAIL: test_a_short_rest_loses_the_later_shift
+21 FAILED   engine: rebuild never removes anything -> FAIL: test_a_long_run_loses_one_assignment_not_the_whole_run
+22 FAILED   engine: rebuild keeps a duplicate in the old schedule -> FAIL: test_duplicates_and_unknown_names_are_reported_not_dropped_quietly
+23 FAILED   engine: a duplicate is not blocked as a duplicate -> FAIL: test_builder_and_checker_agree_on_random_rules
+24 FAILED   model: an unknown field is accepted -> FAIL: test_unknown_roster_field_is_named
+25 FAILED   model: a date outside the roster is accepted -> FAIL: test_date_outside_the_roster_is_refused
+26 FAILED   model: a date before the roster starts is accepted -> FAIL: test_date_outside_the_roster_is_refused
+27 FAILED   model: a skill nobody has is accepted -> FAIL: test_unknown_provider_shift_site_and_skill
+28 FAILED   model: a skill that is not a string crashes the loader -> ERROR: test_values_of_the_wrong_type_are_errors_not_tracebacks
+29 FAILED   model: a kind that is not a string crashes the loader -> ERROR: test_values_of_the_wrong_type_are_errors_not_tracebacks
+30 FAILED   model: a misspelled id or kind does not name the fields present -> FAIL: test_a_misspelled_id_or_kind_names_the_fields_that_are_there
+31 FAILED   model: a key repeated in a JSON file is accepted -> FAIL: test_a_key_repeated_in_a_json_file_is_refused
+32 FAILED   model: a rule whose scope matches nothing is accepted -> FAIL: test_a_scope_that_matches_no_shift_is_refused
+33 FAILED   cli: build exits 0 with unfilled cells -> FAIL: test_build_exits_1_and_lists_unfilled_cells_when_demand_is_too_high
+34 FAILED   cli: rebuild exits 0 with unfilled cells -> FAIL: test_rebuild_exits_1_and_says_so_when_a_cell_cannot_be_filled
+35 FAILED   cli: build accepts rules that ask for nothing -> FAIL: test_build_refuses_rules_that_ask_for_nothing
+36 FAILED   cli: generate overwrites existing files -> FAIL: test_generate_does_not_overwrite_without_force
+37 FAILED   cli: --out may be the schedule being read -> FAIL: test_rebuild_will_not_overwrite_the_schedule_it_reads
+38 FAILED   cli: an unwritable output path is a traceback -> ERROR: test_an_output_folder_that_does_not_exist_is_exit_2_not_a_traceback
+39 FAILED   bench: the same number of different cells passes -> FAIL: test_the_same_number_of_cells_but_different_ones_stops_the_benchmark
+40 FAILED   synth: only seven providers get the pediatric skill -> FAIL: test_eight_providers_have_the_pediatric_skill_and_all_of_them_work_site_a
+40 of 40 breaks made a test fail; 0 did not
