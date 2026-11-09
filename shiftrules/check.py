@@ -31,12 +31,16 @@ def label(roster: Roster, a: Assignment) -> str:
     return "%s %s %s" % (roster.date_of(a.day).isoformat(), a.shift, a.site)
 
 
+def is_known(roster: Roster, a: Assignment) -> bool:
+    return (a.provider in roster.providers and a.shift in roster.shifts
+            and a.site in roster.sites and 0 <= a.day < roster.days)
+
+
 def check(roster: Roster, rules: list, assignments) -> list:
     out: list = []
     valid = []
     for a in assignments:
-        if (a.provider in roster.providers and a.shift in roster.shifts
-                and a.site in roster.sites and 0 <= a.day < roster.days):
+        if is_known(roster, a):
             valid.append(a)
         else:
             out.append(Violation("builtin:unknown", a.provider, a.day,

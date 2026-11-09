@@ -1,8 +1,10 @@
 """Build a schedule one assignment at a time and say what could not be filled.
 
 The builder tests each candidate against the rules incrementally (State).
-The finished list is then judged again by check.py. The two are written
-separately and share only the matching of a rule's scope in model.py.
+The finished list is then judged again by check.py. State and check.py are
+written separately and share only the matching of a rule's scope in
+model.py; only rebuild() calls check.py, to find what a changed rule now
+forbids.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import random
 from collections import Counter, defaultdict
 from typing import NamedTuple
 
+from .check import check, is_known, sort_key
 from .model import Assignment, Roster
 
 
@@ -176,3 +179,47 @@ def build(roster: Roster, rules: list, seed: int = 0, initial=()) -> Result:
     everything = [a for mine in state.by_provider.values() for a in mine]
     everything.sort(key=lambda a: (a.day, roster.shifts[a.shift][0], a.site, a.provider))
     return Result(everything, unfilled, filled_for)
+
+
+class Rebuild(NamedTuple):
+    assignments: list
+    removed: list  # (Assignment, id of the rule it broke)
+    added: list  # (Assignment, id of the coverage rule it was added for)
+    unfilled: list
+
+
+def rebuild(roster: Roster, rules: list, old, seed: int = 0) -> Rebuild:
+    """Apply changed rules to a schedule people have already seen.
+
+    Only assignments that the rules now forbid are removed, and among the
+    assignments in a broken rule the one whose removal leaves the fewest
+    broken rules (the latest on a tie). Whatever is then open is filled by
+    build() with everything that stayed held fixed.
+    """
+    current, removed, seen = [], [], set()
+    for a in old:
+        if a in seen:
+            removed.append((a, "builtin:duplicate"))
+        elif not is_known(roster, a):
+            removed.append((a, "builtin:unknown"))
+        else:
+            seen.add(a)
+            current.append(a)
+
+    while True:
+        broken = [v for v in check(roster, rules, current) if v.involved]
+        if not broken:
+            break
+        first = broken[0]
+        best = None
+        for cand in sorted(first.involved, key=lambda a: sort_key(roster, a), reverse=True):
+            rest = [a for a in current if a != cand]
+            left = sum(1 for v in check(roster, rules, rest) if v.involved)
+            if best is None or left < best[0]:
+                best = (left, cand)
+        removed.append((best[1], first.rule))
+        current = [a for a in current if a != best[1]]
+
+    result = build(roster, rules, seed, initial=current)
+    added = [(a, result.filled_for[a]) for a in result.assignments if a in result.filled_for]
+    return Rebuild(result.assignments, removed, added, result.unfilled)
